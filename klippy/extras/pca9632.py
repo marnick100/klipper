@@ -5,6 +5,8 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 from . import mcp4018
 
+BACKGROUND_PRIORITY_CLOCK = 0x7fffffff00000000
+
 # Register addresses
 PCA9632_MODE1 = 0x00
 PCA9632_MODE2 = 0x01
@@ -35,17 +37,26 @@ class PCA9632:
 
         self.update_leds(self.led_helper.get_status()['color_data'], None)
     def update_leds(self, led_state, print_time):
+        minclock = 0
+        if print_time is not None:
+            minclock = self.mcu.print_time_to_clock(print_time)
+
         red, green, blue, white = [int(v * 255. + .5) for v in led_state[0]]
-        self.i2c.i2c_write([PCA9632_PWM0, red])
-        self.i2c.i2c_write([PCA9632_PWM1, blue])
-        self.i2c.i2c_write([PCA9632_PWM2, green])
-        self.i2c.i2c_write([PCA9632_PWM3, white])
+        self.i2c.i2c_write([PCA9632_PWM0, red], minclock=minclock,
+                           reqclock=BACKGROUND_PRIORITY_CLOCK)
+        self.i2c.i2c_write([PCA9632_PWM1, blue], minclock=minclock,
+                           reqclock=BACKGROUND_PRIORITY_CLOCK)
+        self.i2c.i2c_write([PCA9632_PWM2, green], minclock=minclock,
+                           reqclock=BACKGROUND_PRIORITY_CLOCK)
+        self.i2c.i2c_write([PCA9632_PWM3, white], minclock=minclock,
+                           reqclock=BACKGROUND_PRIORITY_CLOCK)
 
         LEDOUT = (LED_PWM << PCA9632_RED if red else 0)
         LEDOUT |= (LED_PWM << PCA9632_GRN if green else 0)
         LEDOUT |= (LED_PWM << PCA9632_BLU if blue else 0)
         LEDOUT |= (LED_PWM << PCA9632_WHT if white else 0)
-        self.i2c.i2c_write([PCA9632_LEDOUT, LEDOUT])
+        self.i2c.i2c_write([PCA9632_LEDOUT, LEDOUT], minclock=minclock,
+                           reqclock=BACKGROUND_PRIORITY_CLOCK)
     def get_status(self, eventtime):
         return self.led_helper.get_status(eventtime)
 
